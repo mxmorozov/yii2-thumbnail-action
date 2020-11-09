@@ -1,0 +1,22 @@
+{
+    "name": "mxmorozov/yii2-thumbnail-action",
+    "description": "This extension purpose is to make thumbnails of images on the fly.",
+    "type": "yii2-extension",
+    "keywords": ["yii2","extension","thumbnails","actions"],
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Maksim Morozov",
+            "email": "maxpower656@gmail.com"
+        }
+    ],
+    "require": {
+        "yiisoft/yii2": "~2.0.0",
+        "yiisoft/yii2-imagine": "^2.2"
+    },
+    "autoload": {
+        "psr-4": {
+            "mxmorozov\\thumbnail\\": ""
+        }
+    }
+}

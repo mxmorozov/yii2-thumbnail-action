@@ -19,6 +19,12 @@ use yii\web\NotFoundHttpException;
 
 class ImageAction extends Action
 {
+    const RATIO_1X = '1x';
+    const RATIO_2X = '2x';
+    const RATIO_3X = '3x';
+
+    const RATIOS = [self::RATIO_1X => 1, self::RATIO_2X => 2, self::RATIO_3X => 3];
+
     public array $sizes;
     public Closure $getOriginImageFileName;
     public Closure $getImageBaseName;
@@ -27,6 +33,7 @@ class ImageAction extends Action
 
     private string $_sizeName;
     private int $_size;
+    private ?string $_ratio = null;
     private ActiveRecord $_model;
     private string $_originImageFileName;
     private string $_targetImagePath;
@@ -35,6 +42,12 @@ class ImageAction extends Action
 
     public function init()
     {
+        $this->_model = $this->modelClass::findOne((int)Yii::$app->request->get('id'));
+
+        if (!($this->_model instanceof ActiveRecord)) {
+            throw new NotFoundHttpException();
+        }
+
         $this->_sizeName = (string)Yii::$app->request->get('size');
         if (array_key_exists($this->_sizeName, $this->sizes)) {
             $this->_size = $this->sizes[$this->_sizeName];
@@ -42,13 +55,15 @@ class ImageAction extends Action
             throw new NotFoundHttpException();
         }
 
-        $this->_model = $this->modelClass::findOne((int)Yii::$app->request->get('id'));
-
-        if (!($this->_model instanceof ActiveRecord)) {
-            throw new NotFoundHttpException();
+        if ($this->_ratio = (string)Yii::$app->request->get('ratio'))
+        {
+            if (!array_key_exists($this->_ratio, self::RATIOS)) {
+                throw new NotFoundHttpException();
+            }
+            $this->_targetImagePath = $this->cachePath . DIRECTORY_SEPARATOR . $this->_model::tableName() . DIRECTORY_SEPARATOR . $this->_sizeName . DIRECTORY_SEPARATOR . $this->_ratio;
+        } else {
+            $this->_targetImagePath = $this->cachePath . DIRECTORY_SEPARATOR . $this->_model::tableName() . DIRECTORY_SEPARATOR . $this->_sizeName;
         }
-
-        $this->_targetImagePath = $this->cachePath . DIRECTORY_SEPARATOR . $this->_model::tableName() . DIRECTORY_SEPARATOR . $this->_sizeName;
 
         if (!is_dir($this->_targetImagePath)) {
             FileHelper::createDirectory($this->_targetImagePath);
@@ -70,8 +85,10 @@ class ImageAction extends Action
             $height = $imgsize[1];
             $minSize = min($width, $height);
 
+            $ratioMultiplyer = $this->_ratio ? self::RATIOS[$this->_ratio] : 1;
+
             Image::crop($this->_originImageFileName, $minSize, $minSize)
-                ->resize(new Box($this->_size, $this->_size))
+                ->resize(new Box($this->_size * $ratioMultiplyer, $this->_size * $ratioMultiplyer))
                 ->save($this->_targetImageFileName);
         }
 

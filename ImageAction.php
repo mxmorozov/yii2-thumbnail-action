@@ -12,6 +12,7 @@ use Closure;
 use Imagine\Image\Box;
 use Yii;
 use yii\base\Action;
+use yii\base\Exception;
 use yii\db\ActiveRecord;
 use yii\helpers\FileHelper;
 use yii\imagine\Image;
@@ -19,12 +20,17 @@ use yii\web\NotFoundHttpException;
 
 class ImageAction extends Action
 {
+    const TYPE_QUAD = 'quad';
+    const TYPE_WIDTH = 'width';
+    const TYPE_HEIGHT = 'height';
+
     const RATIO_1X = '1x';
     const RATIO_2X = '2x';
     const RATIO_3X = '3x';
 
     const RATIOS = [self::RATIO_1X => 1, self::RATIO_2X => 2, self::RATIO_3X => 3];
 
+    public string $type = self::TYPE_QUAD;
     public array $sizes;
     public Closure $getOriginImageFileName;
     public Closure $getImageBaseName;
@@ -55,8 +61,7 @@ class ImageAction extends Action
             throw new NotFoundHttpException();
         }
 
-        if ($this->_ratio = (string)Yii::$app->request->get('ratio'))
-        {
+        if ($this->_ratio = (string)Yii::$app->request->get('ratio')) {
             if (!array_key_exists($this->_ratio, self::RATIOS)) {
                 throw new NotFoundHttpException();
             }
@@ -81,15 +86,27 @@ class ImageAction extends Action
             }
 
             $imgsize = getimagesize($this->_originImageFileName);
-            $width = $imgsize[0];
-            $height = $imgsize[1];
-            $minSize = min($width, $height);
+            $originWidth = $imgsize[0];
+            $originHeight = $imgsize[1];
 
             $ratioMultiplyer = $this->_ratio ? self::RATIOS[$this->_ratio] : 1;
 
-            Image::crop($this->_originImageFileName, $minSize, $minSize)
-                ->resize(new Box($this->_size * $ratioMultiplyer, $this->_size * $ratioMultiplyer))
-                ->save($this->_targetImageFileName);
+            if ($this->type == self::TYPE_QUAD) {
+                $minSize = min($originWidth, $originHeight);
+                Image::crop($this->_originImageFileName, $minSize, $minSize)
+                    ->resize(new Box($this->_size * $ratioMultiplyer, $this->_size * $ratioMultiplyer))
+                    ->save($this->_targetImageFileName);
+            } elseif ($this->type == self::TYPE_WIDTH) {
+                $factor = $originWidth / $this->_size;
+                Image::resize($this->_originImageFileName, $this->_size * $ratioMultiplyer, $originHeight * $factor * $ratioMultiplyer)
+                    ->save($this->_targetImageFileName);
+            } elseif ($this->type == self::TYPE_HEIGHT) {
+                $factor = $originHeight / $this->_size;
+                Image::resize($this->_originImageFileName, $originWidth * $factor * $ratioMultiplyer, $this->_size * $ratioMultiplyer)
+                    ->save($this->_targetImageFileName);
+            } else {
+                throw new Exception('unknown type');
+            }
         }
 
         return Yii::$app->getResponse()->sendFile($this->_targetImageFileName, null, [

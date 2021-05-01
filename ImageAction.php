@@ -92,10 +92,13 @@ class ImageAction extends Action
             $ratioMultiplyer = $this->_ratio ? self::RATIOS[$this->_ratio] : 1;
 
             if ($this->type == self::TYPE_QUAD) {
-                $minSize = min($originWidth, $originHeight);
-                Image::crop($this->_originImageFileName, $minSize, $minSize)
-                    ->resize(new Box($this->_size * $ratioMultiplyer, $this->_size * $ratioMultiplyer))
-                    ->save($this->_targetImageFileName);
+                $minOriginSideSize = min($originWidth, $originHeight);
+                $image = Image::crop($this->_originImageFileName, $minOriginSideSize, $minOriginSideSize);
+                $newSideSize = $this->_size * $ratioMultiplyer;
+                if ($newSideSize < $minOriginSideSize) {
+                    $image->resize(new Box($newSideSize, $newSideSize));
+                }
+                $image->save($this->_targetImageFileName);
             } elseif ($this->type == self::TYPE_WIDTH) {
                 $factor = $originWidth / $this->_size;
                 Image::resize($this->_originImageFileName, $this->_size * $ratioMultiplyer, $originHeight * $factor * $ratioMultiplyer)

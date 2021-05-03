@@ -44,6 +44,7 @@ class ImageAction extends Action
     private string $_originImageFileName;
     private string $_targetImagePath;
     private string $_targetImageFileName;
+    private ?string $_targetImageFileNameWebp = null;
 
 
     public function init()
@@ -76,11 +77,16 @@ class ImageAction extends Action
 
         $this->_targetImageFileName = $this->_targetImagePath . DIRECTORY_SEPARATOR . call_user_func($this->getImageBaseName, $this->_model);
 
+        $requestedFilename = (string)Yii::$app->request->get('filename');
+
+        if (pathinfo($requestedFilename, PATHINFO_EXTENSION) == 'webp') {
+            $this->_targetImageFileNameWebp = $this->_targetImagePath . DIRECTORY_SEPARATOR . $requestedFilename;
+        }
     }
 
     public function run()
     {
-        if (!file_exists($this->_targetImageFileName)) {
+        if (!file_exists($this->_targetImageFileName) || ($this->_targetImageFileNameWebp && !file_exists($this->_targetImageFileNameWebp))) {
             if ($this->getOriginImageFileName) {
                 $this->_originImageFileName = call_user_func($this->getOriginImageFileName, $this->_model);
             }
@@ -98,21 +104,24 @@ class ImageAction extends Action
                 if ($newSideSize < $minOriginSideSize) {
                     $image->resize(new Box($newSideSize, $newSideSize));
                 }
-                $image->save($this->_targetImageFileName);
+
             } elseif ($this->type == self::TYPE_WIDTH) {
                 $factor = $originWidth / $this->_size;
-                Image::resize($this->_originImageFileName, $this->_size * $ratioMultiplyer, $originHeight * $factor * $ratioMultiplyer)
-                    ->save($this->_targetImageFileName);
+                $image = Image::resize($this->_originImageFileName, $this->_size * $ratioMultiplyer, $originHeight * $factor * $ratioMultiplyer);
             } elseif ($this->type == self::TYPE_HEIGHT) {
                 $factor = $originHeight / $this->_size;
-                Image::resize($this->_originImageFileName, $originWidth * $factor * $ratioMultiplyer, $this->_size * $ratioMultiplyer)
-                    ->save($this->_targetImageFileName);
+                $image = Image::resize($this->_originImageFileName, $originWidth * $factor * $ratioMultiplyer, $this->_size * $ratioMultiplyer);
             } else {
                 throw new Exception('unknown type');
             }
+            $image->save($this->_targetImageFileName);
+
+            if ($this->_targetImageFileNameWebp) {
+                shell_exec("cwebp -q 80 {$this->_targetImageFileName} -o {$this->_targetImageFileNameWebp}");
+            }
         }
 
-        return Yii::$app->getResponse()->sendFile($this->_targetImageFileName, null, [
+        return Yii::$app->response->sendFile($this->_targetImageFileNameWebp ?? $this->_targetImageFileName, null, [
             'mimeType' => mime_content_type($this->_targetImageFileName),
             'inline' => true,
         ]);

@@ -75,7 +75,11 @@ class ImageAction extends Action
             FileHelper::createDirectory($this->_targetImagePath);
         }
 
-        $this->_targetImageFileName = $this->_targetImagePath . DIRECTORY_SEPARATOR . call_user_func($this->getImageBaseName, $this->_model);
+        if ($imageBaseName = call_user_func($this->getImageBaseName, $this->_model)) {
+            $this->_targetImageFileName = $this->_targetImagePath . DIRECTORY_SEPARATOR . $imageBaseName;
+        } else {
+            throw new NotFoundHttpException();
+        }
 
         $requestedFilename = (string)Yii::$app->request->get('filename');
 

@@ -40,7 +40,7 @@ class ImageAction extends Action
     private string $_sizeName;
     private int $_size;
     private ?string $_ratio = null;
-    private ActiveRecord $_model;
+    private ?ActiveRecord $_model;
     private string $_originImageFileName;
     private string $_targetImagePath;
     private string $_targetImageFileName;

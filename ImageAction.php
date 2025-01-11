@@ -34,6 +34,7 @@ class ImageAction extends Action
     public array $sizes;
     public Closure $getOriginImageFileName;
     public Closure $getImageBaseName;
+    public ?Closure $handleImageNotFound = null;
     public string $cachePath;
     public string $modelClass;
 
@@ -93,6 +94,12 @@ class ImageAction extends Action
         if (!file_exists($this->_targetImageFileName) || ($this->_targetImageFileNameWebp && !file_exists($this->_targetImageFileNameWebp))) {
             if ($this->getOriginImageFileName) {
                 $this->_originImageFileName = call_user_func($this->getOriginImageFileName, $this->_model);
+            }
+
+            if (!file_exists($this->_originImageFileName)) {
+                if ($this->handleImageNotFound) {
+                    call_user_func($this->handleImageNotFound, $this->_model);
+                }
             }
 
             $imgsize = getimagesize($this->_originImageFileName);

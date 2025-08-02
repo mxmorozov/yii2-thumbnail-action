@@ -77,7 +77,7 @@ class ImageAction extends Action
         }
 
         if ($imageBaseName = call_user_func($this->getImageBaseName, $this->_model)) {
-            $this->_targetImageFileName = $this->_targetImagePath . DIRECTORY_SEPARATOR . $imageBaseName;
+            $this->_targetImageFileName = $this->_targetImagePath . DIRECTORY_SEPARATOR . basename($imageBaseName);
         } else {
             throw new NotFoundHttpException();
         }
